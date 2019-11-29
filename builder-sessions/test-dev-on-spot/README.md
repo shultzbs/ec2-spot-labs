@@ -45,7 +45,7 @@ Here is a diagram of the resulting architecture:
 ### 1. Checkout this repo
 
 ```
-git clone https://github.com/awslabs/ec2-spot-labs
+git clone https://github.com/shultzbs/ec2-spot-labs
 ```
 
 ```
@@ -66,17 +66,17 @@ bucket=${your_name}-reinvent-ec2spottestdev-bucket
 ```
 
 ```
-aws s3api create-bucket --bucket $bucket
+aws s3api create-bucket --bucket ${bucket}
 ```
 
 Upload scripts to the bucket.
 
 ```
-aws s3 cp simple_server.py s3://$bucket/
+aws s3 cp simple_server.py s3://${bucket}/
 ```
 
 ```
-aws s3 cp test_simple_server.py s3://$bucket/
+aws s3 cp test_simple_server.py s3://${bucket}/
 ```
 
 ### 3. Create an ssh key pair
@@ -108,7 +108,7 @@ Create the CloudFormation stack which performs most of the overhead setup for th
 ```
 aws cloudformation create-stack \
   --template-body file://demo_setup.yaml \
-  --parameters ParameterKey=s3Bucket,ParameterValue=$bucket \
+  --parameters ParameterKey=s3Bucket,ParameterValue=${bucket} \
   --capabilities CAPABILITY_IAM \
   --stack-name ReInvent-EC2SpotTestDev-Stack
 ```
@@ -166,10 +166,10 @@ $(aws cloudformation describe-stacks \
   --output text)
 ```
 
-Now, build the input JSON for the CreateAutoScalingGroup call.
+Now, build the input policy for the CreateAutoScalingGroup call.
 
 ```
-sed s~%LAUNCH_TEMPLATE_ID%~$launch_template_id~ asg_policy_template.json > asg_policy.json
+sed s~%LAUNCH_TEMPLATE_ID%~${launch_template_id}~ asg_policy_template.json > asg_policy.json
 ```
 
 Create the Auto Scaling Group.
@@ -184,9 +184,9 @@ aws autoscaling create-auto-scaling-group \
 ```
 
 Take note of some important configuration values in the Auto Scaling Group that we just created:
-* WeightedCapacity (in the [Group policy](asg_policy.json))
+* WeightedCapacity (in the [Group policy](asg_policy_template.json))
   * We've weighted each instance type by the number of vCPUs.
-* SpotAllocationStrategy: capacity-optimized (in the [Group policy](asg_policy.json))
+* SpotAllocationStrategy: capacity-optimized (in the [Group policy](asg_policy_template.json))
   * The Spot Instances come from the pool with optimal capacity for the number of instances that are launching.
   * In this context, a "pool" is the combination of instance type (e.g. t2.small) and Availability Zone.
 * min-size: 4
@@ -195,7 +195,7 @@ Take note of some important configuration values in the Auto Scaling Group that 
 * vpc-zone-identifier
   * The Group will try to balance the target capacity equally across each of these subnets.
 
-Wait for the Group to launch (LifeCycleState of all instances == 'InService', sum of WeightedCapacity across all instances  == 4).
+Wait for the Group to launch (LifeCycleState of all instances == 'InService', sum of WeightedCapacity across all instances == 4).
 
 ```
 aws autoscaling describe-auto-scaling-groups \
@@ -261,7 +261,7 @@ If you'd like to continue and learn some strategies for Spot Instance interrupti
 
 ## Spot Instance interruption handling strategies
 
-The Spot Instances that we launched in the previous steps were stateless. Each instance is simply calling the target web server and posting results back to CloudWatch. If an instance is interrupted, the Auto Scaling Group will automatically replace it with a new one.
+The Spot Instances that we launched in the previous steps were stateless. Each Instance is simply calling the target web server and posting results back to CloudWatch. If an Instance is interrupted, the Auto Scaling Group will automatically replace it with a new one.
 
 However, in many use cases, some additional logic may be desired when handling Spot Instance interruptions. Some examples:
 * Saving the application state.
@@ -292,9 +292,9 @@ In step 4 (creating the CloudFormation stack), we created a CloudWatch event rul
 Create a Fleet of Spot Instances. We'll use an EC2 Fleet instead of an Auto Scaling Group because scaling down an EC2 Fleet triggers Spot Instance interruption notices. To keep things simple, we can use the same Launch Template and subnets created in the previous steps. 
 
 ```
-sed s~%LAUNCH_TEMPLATE_ID%~$launch_template_id~ ec2_fleet_template.json \
-  | sed s~%SUBNET_ID_1%~$subnet_id_1~ \
-  | sed s~%SUBNET_ID_2%~$subnet_id_2~ \
+sed s~%LAUNCH_TEMPLATE_ID%~${launch_template_id}~ ec2_fleet_template.json \
+  | sed s~%SUBNET_ID_1%~${subnet_id_1}~ \
+  | sed s~%SUBNET_ID_2%~${subnet_id_2}~ \
   > ec2_fleet.json
 ```
 
@@ -310,7 +310,7 @@ Wait for the Fleet to be fulfilled.
 
 ```
 aws ec2 describe-fleets \
-  --fleet-ids $fleet_id \
+  --fleet-ids ${fleet_id} \
   --query 'Fleets[0].FulfilledCapacity'
 ```
 
@@ -318,7 +318,7 @@ If the Fleet isn't being fulfilled, you can debug using the Fleet history.
 
 ```
 aws ec2 describe-fleet-history \
-  --fleet-id $fleet_id \
+  --fleet-id ${fleet_id} \
   --start-time 2019-11-01
 ```
 
@@ -328,7 +328,7 @@ Now reduce the fleet size, which should trigger Spot interruptions.
 
 ```
 aws ec2 modify-fleet \
-  --fleet-id $fleet_id \
+  --fleet-id ${fleet_id} \
   --excess-capacity-termination-policy termination \
   --target-capacity-specification TotalTargetCapacity=0
 ```
@@ -340,7 +340,7 @@ Retrieve the public DNS of the instance being interrupted.
 ```
 spot_instance_dns=\
 $(aws ec2 describe-instances \
-  --filters Name=tag:aws:ec2:fleet-id,Values=$fleet_id \
+  --filters Name=tag:aws:ec2:fleet-id,Values=${fleet_id} \
   --query 'Reservations[0].Instances[0].PublicDnsName' \
   --output text)
 ```
@@ -348,7 +348,7 @@ $(aws ec2 describe-instances \
 Verify the the instance metadata on the host. Keep in mind that the instance will be terminated after two minutes.
 
 ```
-ssh -i ReInvent-EC2SpotTestDev-KeyPair.pem ec2-user@$spot_instance_dns
+ssh -i ReInvent-EC2SpotTestDev-KeyPair.pem ec2-user@${spot_instance_dns}
 ```
 
 ```
@@ -366,7 +366,7 @@ Delete the EC2 Fleet used for testing interruption notices.
 
 ```
 aws ec2 delete-fleets \
-  --fleet-id $fleet_id \
+  --fleet-id ${fleet_id} \
   --terminate-instances
 ```
 
@@ -394,12 +394,12 @@ aws cloudformation delete-stack \
 Empty and delete the S3 bucket.
 
 ```
-aws s3 rm s3://$bucket --recursive
+aws s3 rm s3://${bucket} --recursive
 ```
 
 ```
 aws s3api delete-bucket \
-  --bucket $bucket
+  --bucket ${bucket}
 ```
 
 Delete the SSH key pair.
