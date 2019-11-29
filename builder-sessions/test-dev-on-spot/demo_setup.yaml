@@ -76,6 +76,10 @@ Outputs:
     Description: Launch Template to be used for the testing Auto Scaling Group
     Value:
       Ref: testAsgLaunchTemplate
+  spotItnLaunchTemplate:
+    Description: Launch Template with no EC2 User Data to be used for Spot Interruption Notice testing
+    Value:
+      Ref: spotItnLaunchTemplate
   testAsgSubnet1:
     Description: Subnet 1 where the test Auto Scaling Group can launch
     Value:
@@ -428,6 +432,28 @@ Resources:
                     - webServerInstance
                     - PublicDnsName
                   - "&"
+  spotItnLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    DependsOn:
+    - testAsgInstanceProfile
+    - testAsgSecurityGroup
+    Properties:
+      LaunchTemplateName: ReInvent-EC2SpotTestDev-SpotItnTemplate
+      LaunchTemplateData:
+        IamInstanceProfile:
+          Name:
+            Ref: testAsgInstanceProfile
+        ImageId:
+          Ref: testAsgAmi
+        KeyName:
+          Ref: keyName
+        SecurityGroupIds:
+        - Ref: testAsgSecurityGroup
+        TagSpecifications:
+        - ResourceType: instance
+          Tags:
+          - Key: ReInvent-EC2SpotTestDev
+            Value: TestSpotItn
   spotInterruptionSnsTopic:
     Type: AWS::SNS::Topic
     Properties:

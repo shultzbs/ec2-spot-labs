@@ -143,7 +143,7 @@ Feel free to subcribe to this topic if you'd like to test this functionality (e.
 In step 4, we created two subnets and a Launch Template that we'll use for launching the testing Group. Retrieve these values.
 
 ```
-launch_template_id=\
+asg_launch_template_id=\
 $(aws cloudformation describe-stacks \
   --stack-name ReInvent-EC2SpotTestDev-Stack \
   --query 'Stacks[0].Outputs[?OutputKey==`testAsgLaunchTemplate`].OutputValue' \
@@ -169,7 +169,7 @@ $(aws cloudformation describe-stacks \
 Now, build the input policy for the CreateAutoScalingGroup call.
 
 ```
-sed s~%LAUNCH_TEMPLATE_ID%~${launch_template_id}~ asg_policy_template.json > asg_policy.json
+sed s~%LAUNCH_TEMPLATE_ID%~${asg_launch_template_id}~ asg_policy_template.json > asg_policy.json
 ```
 
 Create the Auto Scaling Group.
@@ -286,10 +286,18 @@ In step 4 (creating the CloudFormation stack), we created a CloudWatch event rul
 
 ### 9. Create a Fleet of Spot Instances to be interrupted
 
-Create a Fleet of Spot Instances. We'll use an EC2 Fleet instead of an Auto Scaling Group because scaling down an EC2 Fleet triggers Spot Instance interruption notices. To keep things simple, we can use the same Launch Template and subnets created in the previous steps. 
+Create a Fleet of Spot Instances. We'll use an EC2 Fleet instead of an Auto Scaling Group because scaling down an EC2 Fleet triggers Spot Instance interruption notices. To keep things simple, we can use the same subnets created in the previous steps. 
 
 ```
-sed s~%LAUNCH_TEMPLATE_ID%~${launch_template_id}~ ec2_fleet_template.json \
+spot_itn_launch_template_id=\
+$(aws cloudformation describe-stacks \
+  --stack-name ReInvent-EC2SpotTestDev-Stack \
+  --query 'Stacks[0].Outputs[?OutputKey==`spotItnLaunchTemplate`].OutputValue' \
+  --output text)
+```
+
+```
+sed s~%LAUNCH_TEMPLATE_ID%~${spot_itn_launch_template_id}~ ec2_fleet_template.json \
   | sed s~%SUBNET_ID_1%~${subnet_id_1}~ \
   | sed s~%SUBNET_ID_2%~${subnet_id_2}~ \
   > ec2_fleet.json
