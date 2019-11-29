@@ -303,7 +303,7 @@ $(aws ec2 create-fleet \
   --output text)
 ```
 
-Wait for the Fleet to be fulfilled (ActivityStatus == 'fulfilled' and FulfilledCapacity == 1.0)
+Wait for the Fleet to be fulfilled (ActivityStatus == 'fulfilled' and FulfilledCapacity == 2.0)
 
 ```
 aws ec2 describe-fleets \
@@ -321,7 +321,7 @@ aws ec2 describe-fleet-history \
 
 ### 10. Trigger Spot Instance interruptions
 
-Now reduce the fleet size, which should trigger Spot interruptions.
+Now reduce the Fleet size, which should trigger Spot interruptions.
 
 ```
 aws ec2 modify-fleet \
@@ -332,7 +332,7 @@ aws ec2 modify-fleet \
 
 ### 11. Verify Spot Instance interruption notices
 
-Retrieve the public DNS of the instance being interrupted.
+Retrieve the public DNS of the Instance being interrupted.
 
 ```
 spot_instance_dns=\
@@ -342,7 +342,7 @@ $(aws ec2 describe-instances \
   --output text)
 ```
 
-Verify the the instance metadata on the host. Note that you may have to wait a minute for the instance termination notice to appear (you will get 404 errors before then). The instance will be terminated two minutes after the notice is delivered.
+Verify the the metadata on the Instance. Note that you may have to wait a minute for the Instance termination notice to appear (you will get 404 errors before then). The Instance should be terminated two minutes after the notice is delivered.
 
 ```
 ssh -i ReInvent-EC2SpotTestDev-KeyPair.pem ec2-user@${spot_instance_dns}
@@ -352,7 +352,7 @@ ssh -i ReInvent-EC2SpotTestDev-KeyPair.pem ec2-user@${spot_instance_dns}
 curl http://169.254.169.254/latest/meta-data/spot/instance-action
 ```
 
-You should also have received a notification on the SNS Topic for every Spot instance that was interrupted. Note that in this example we've created an SNS topic, but CloudWatch event rules are flexible and can even be configured to trigger Lambda functions.
+You should also have received a notification on the SNS Topic for every Spot Instance that was interrupted. Note that in this example we've created an SNS topic, but CloudWatch event rules are flexible and can even be configured to trigger Lambda functions.
 
 
 ## Clean up all resources
