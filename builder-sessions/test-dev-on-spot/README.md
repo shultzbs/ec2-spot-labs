@@ -58,7 +58,6 @@ Create an S3 bucket.
 
 ```
 your_name=<your_name_or_any_other_unique_string>
-
 ```
 
 ```
